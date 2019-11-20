@@ -2,13 +2,10 @@ mod real_time;
 mod camera;
 
 use syslog::Facility;
-use log::{LevelFilter, error};
+use log::LevelFilter;
 
-use std::thread;
-use std::sync::mpsc::channel;
-
-use real_time::{Sequencer, RealTime, 
-    SequencerCommand::{Exit, ProvideService}};
+use real_time::{Sequencer, RealTime};
+use std::sync::Arc;
 
 use camera::Camera;
 
@@ -20,35 +17,24 @@ fn main() {
         Some("Sean's Code question_3")
     ).expect("Unable to connect to syslog");
 
-    // Creating synchronization resources
-    Sequencer::real_time_setup();
-    let (tx_camera, rx_camera) = channel();
-
+    // Initializing resources
     let camera = Camera::new();
+    let sequencer = Sequencer::new();
 
-    let camera_service = move || {
-        Camera::real_time_setup();
+    // Setting CPU affinity and priority of sequencer
+    Sequencer::real_time_setup();
 
-        loop {
-            let sequencer_command = match rx_camera.recv() {
-                Ok(sequencer_command) => sequencer_command,
-                Err(error) =>  {
-                    error!("camera failed to receive command: {}", error);
-                    continue;
-                }
-            };
-
-            match sequencer_command {
-                ProvideService => {
-
-                }
-                Exit => break
-            }
+    // Defining services of sequencer and other tasks
+    let camera_service = Arc::new(
+        move || {
+            let frame = camera.capture();
         }
-    };
+    );
     
-    thread::spawn(move || {
-        
-    });
+    
+    let services = vec![camera_service];
+
+    sequencer.sequence(services);
+
 
 }
