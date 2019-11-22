@@ -3,8 +3,10 @@ use crate::real_time::RealTime;
 
 use rscam::{Config, Frame};
 
+use std::sync::Arc;
+
 pub struct Camera {
-    hardware: rscam::Camera
+    hardware: rscam::Camera,
 }
 
 impl Camera {
@@ -14,7 +16,7 @@ impl Camera {
 
     pub fn new() -> Self {
         let mut camera = Camera {
-            hardware: rscam::Camera::new("/dev/video0").unwrap()
+            hardware: rscam::Camera::new("/dev/video0").unwrap(),
         };
 
         camera.hardware.start(
@@ -38,12 +40,15 @@ impl Camera {
 
 impl RealTime for Camera {
 
-    fn priority() -> i32 {
+    fn priority(&self) -> i32 {
         real_time::MAX_PRIORITY - 1
     }
 
-    fn frequency() -> u32 {
+    fn frequency(&self) -> u32 {
         10
     }
-}
 
+    fn service(&self) {
+        
+    }
+}

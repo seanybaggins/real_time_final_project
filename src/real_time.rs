@@ -4,54 +4,62 @@ use scheduler::Policy;
 use core_affinity;
 
 use std::thread;
-use std::sync::{mpsc::channel, Arc};
+use std::sync::mpsc::channel;
 
 use log::error;
 
-pub(super) trait RealTime {
+pub trait RealTime {
 
-    fn priority() -> i32;
+    fn priority(&self) -> i32;
 
-    fn frequency() -> u32;
+    fn frequency(&self) -> u32;
 
-    fn set_cpu_affinity() {
+    fn service(&self);
+
+    fn set_cpu_affinity(&self) {
         let core_ids = core_affinity::get_core_ids().expect("Failed to get available cores");
         core_affinity::set_for_current(core_ids[0]);
     }
 
-    fn set_policy() {
-        scheduler::set_self_policy(Policy::Fifo, Self::priority()).unwrap();
+    fn set_policy(&self) {
+        scheduler::set_self_policy(Policy::Fifo, self.priority()).unwrap();
     }
 
-    fn real_time_setup() {
-        Self::set_cpu_affinity();
-        Self::set_policy();
+    fn real_time_setup(&self) {
+        self.set_cpu_affinity();
+        self.set_policy();
     }
 }
 
-pub struct Sequencer;
+pub struct Sequencer {
+    services: Vec<Box<RealTime + Send>>
+}
 
 impl RealTime for Sequencer {
 
-    fn priority() -> i32 {
+    fn priority(&self) -> i32 {
         MAX_PRIORITY
     }
 
-    fn frequency() -> u32 {
+    fn frequency(&self) -> u32 {
         100
     }
+
+    fn service(&self) {
+        println!("hello");
+    }
+
     
 }
 
 impl Sequencer {
-    pub fn sequence<F>(&self, mut services: Vec<Arc<F>>) 
-    where F: Fn() + Send + Sync + 'static {
-        
-        for service in services.iter_mut() {
-            let (tx, rx) = channel();
-            let service = service.clone();
-            thread::spawn(move || {
+    pub fn sequence(&self, mut services: Vec<Box<RealTime + Send>>)  {
 
+        for service in services {
+            let (tx, rx) = channel();
+            thread::spawn(move || {
+                
+                service.real_time_setup();
                 loop {
                     let sequencer_command = match rx.recv() {
                         Ok(sequencer_command) => sequencer_command,
@@ -63,7 +71,7 @@ impl Sequencer {
         
                     match sequencer_command {
                         SequencerCommand::ProvideService => {
-                            service();
+                            service.service();
                         }
                         SequencerCommand::Exit => break
                     }
@@ -72,8 +80,10 @@ impl Sequencer {
         }
     }
 
-    pub fn new() -> Self {
-        Sequencer{}
+    pub fn new(services: Vec<Box<RealTime + Send>>) -> Self {
+        Sequencer {
+            services
+        }
     }
 }
 
@@ -81,10 +91,3 @@ pub enum SequencerCommand {
     ProvideService,
     Exit
 }
-
-/*
-pub fn provide<F>(service: F) 
-    where F: FnMut() + Send + Sync + 'static {
-        service()
-}
-*/
