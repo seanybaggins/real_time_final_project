@@ -5,11 +5,9 @@ use syslog::Facility;
 use log::LevelFilter;
 
 use real_time::{Sequencer, RealTime};
-
-use std::mem;
+use std::sync::Arc;
 
 use imaging::Camera;
-use rscam::Frame;
 
 fn main() {
     
@@ -20,13 +18,13 @@ fn main() {
     ).expect("Unable to connect to syslog");
 
     // Initializing resources
-    
+    let camera: Arc<RealTime + Send + Sync> = Arc::new(Camera::new());
 
-    let camera: Box<RealTime + Send> = Box::new(Camera::new());
+    let services: Vec<Arc<RealTime + Send + Sync>> = vec![camera];
 
-    let services: Vec<Box<RealTime + Send>> = vec![camera];
+    let sequencer = Sequencer::new();
 
-    let sequencer = Sequencer::new(services);
+    sequencer.sequence(services);
 
 
 }

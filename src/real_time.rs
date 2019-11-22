@@ -4,9 +4,10 @@ use scheduler::Policy;
 use core_affinity;
 
 use std::thread;
-use std::sync::mpsc::channel;
+use std::sync::{mpsc::channel, Arc};
+use std::time::{Instant, Duration};
 
-use log::error;
+use log::{error, info};
 
 pub trait RealTime {
 
@@ -31,9 +32,7 @@ pub trait RealTime {
     }
 }
 
-pub struct Sequencer {
-    services: Vec<Box<RealTime + Send>>
-}
+pub struct Sequencer {}
 
 impl RealTime for Sequencer {
 
@@ -48,17 +47,22 @@ impl RealTime for Sequencer {
     fn service(&self) {
         println!("hello");
     }
-
-    
 }
 
 impl Sequencer {
-    pub fn sequence(&self, mut services: Vec<Box<RealTime + Send>>)  {
 
-        for service in services {
+    pub fn sequence(&self, services: Vec<Arc<RealTime + Send + Sync>>) {
+        let mut tx_channels = Vec::with_capacity(services.len());
+
+        for service in services.iter() {
+            // Setting up communication channels
             let (tx, rx) = channel();
+            tx_channels.push(tx);
+
+            // Giving threads their own reference to objects
+            let service = service.clone();
+
             thread::spawn(move || {
-                
                 service.real_time_setup();
                 loop {
                     let sequencer_command = match rx.recv() {
@@ -78,13 +82,30 @@ impl Sequencer {
                 }
             });
         }
-    }
 
-    pub fn new(services: Vec<Box<RealTime + Send>>) -> Self {
-        Sequencer {
-            services
+        let start_time = Instant::now();
+        let stop_time = Duration::from_secs(1800);
+        let mut sequence_count = 0;
+
+        while start_time.elapsed() < stop_time {
+            for (service_number, service) in services.iter().enumerate() {
+                if sequence_count % service.frequency() == 0 {
+                    tx_channels[service_number].send(
+                        SequencerCommand::ProvideService
+                    )
+                    .unwrap();
+                } 
+            }
         }
     }
+
+    pub fn new() -> Self {
+        let sequencer = Sequencer {};
+        sequencer.real_time_setup();
+
+        return sequencer;
+    }
+    
 }
 
 pub enum SequencerCommand {
