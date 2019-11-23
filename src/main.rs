@@ -7,6 +7,8 @@ use log::LevelFilter;
 use real_time::{Sequencer, RealTime};
 use std::sync::Arc;
 
+use std::time::Duration;
+
 use imaging::Camera;
 
 fn main() {
@@ -23,8 +25,7 @@ fn main() {
     let services: Vec<Arc<RealTime + Send + Sync>> = vec![camera];
 
     let sequencer = Sequencer::new();
+    let stop_time = Duration::from_millis(100);
 
-    sequencer.sequence(services);
-
-
+    sequencer.sequence(services, stop_time);
 }

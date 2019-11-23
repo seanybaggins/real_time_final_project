@@ -3,9 +3,10 @@ use crate::real_time::RealTime;
 
 use rscam::{Config, Frame};
 
-use std::sync::Arc;
+use std::sync::{Arc, mpsc::Sender};
 
 pub struct Camera {
+    //to_file_selector: Arc<Sender<Send + Sync>>,
     hardware: rscam::Camera,
 }
 
@@ -14,7 +15,7 @@ impl Camera {
         self.hardware.capture().unwrap()
     }
 
-    pub fn new() -> Self {
+    pub fn new () -> Self {
         let mut camera = Camera {
             hardware: rscam::Camera::new("/dev/video0").unwrap(),
         };
