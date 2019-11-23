@@ -6,7 +6,7 @@ use rscam::{Config, Frame};
 use std::sync::{Arc, mpsc::Sender};
 
 pub struct Camera {
-    //to_file_selector: Arc<Sender<Send + Sync>>,
+    to_file_differ: Sender<Frame>,
     hardware: rscam::Camera,
 }
 
@@ -15,8 +15,9 @@ impl Camera {
         self.hardware.capture().unwrap()
     }
 
-    pub fn new () -> Self {
+    pub fn new (to_file_differ: Sender<Frame>) -> Self {
         let mut camera = Camera {
+            to_file_differ,
             hardware: rscam::Camera::new("/dev/video0").unwrap(),
         };
 
@@ -42,7 +43,7 @@ impl Camera {
 impl RealTime for Camera {
 
     fn priority(&self) -> i32 {
-        real_time::MAX_PRIORITY - 1
+        real_time::MAX_PRIORITY - 2
     }
 
     fn frequency(&self) -> u32 {

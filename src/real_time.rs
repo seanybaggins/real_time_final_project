@@ -15,6 +15,7 @@ pub trait RealTime {
 
     fn priority(&self) -> i32;
 
+    /// Should return the frequency that the service should run in hertz
     fn frequency(&self) -> u32;
 
     fn period(&self) -> Duration {
@@ -41,7 +42,9 @@ pub trait RealTime {
     }
 }
 
-pub struct Sequencer {}
+pub struct Sequencer {
+
+}
 
 impl RealTime for Sequencer {
 
@@ -54,23 +57,28 @@ impl RealTime for Sequencer {
     }
 
     fn service(&self) {
-        println!("hello");
+        
     }
 }
 
 impl Sequencer {
 
-    pub fn sequence(&self, services: Vec<Arc<RealTime + Send + Sync>>, stop_time: Duration) {
+    pub fn sequence(&self, services: Vec<Box<RealTime + Send>>, stop_time: Duration) {
         let mut tx_channels = Vec::with_capacity(services.len());
         let universal_clock = Arc::new(Instant::now());
 
-        for service in services.iter() {
+        let service_frequencies: Vec<u32> = services.iter()
+            .map(|real_time_object| {
+                real_time_object.frequency()
+            })
+            .collect();
+        
+        for service in services {
             // Setting up communication channels
             let (tx, rx) = channel();
             tx_channels.push(tx);
 
             // Giving threads their own reference to objects and universal clock
-            let service = service.clone();
             let universal_clock = universal_clock.clone();
 
             thread::spawn(move || {
@@ -94,15 +102,14 @@ impl Sequencer {
             });
         }
 
-        
         let time_capturing = Instant::now();
         let mut sequence_count = 0;
         let start_time = universal_clock.elapsed();
 
         while time_capturing.elapsed() < stop_time {
 
-            for (service_number, service) in services.iter().enumerate() {
-                if sequence_count % service.frequency() == 0 {
+            for (service_number, service_frequency) in service_frequencies.iter().enumerate() {
+                if sequence_count % service_frequency == 0 {
                     tx_channels[service_number].send(
                         SequencerCommand::ProvideService
                     )
@@ -119,8 +126,9 @@ impl Sequencer {
             thread::sleep(self.period() - time_error);
             
             sequence_count += 1;
+            
         }
-
+        
         // We are done! Sending message to threads to stop working
         for tx in tx_channels {
             tx.send(SequencerCommand::Exit).unwrap();
