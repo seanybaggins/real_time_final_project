@@ -9,7 +9,15 @@ struct FileDiffer {
 }
 
 impl RealTime for FileDiffer {
+    fn priority(&self) -> i32 {
+        real_time::MAX_PRIORITY - 1
+    }
+
+    fn frequency(&self) -> u32 {
+        20
+    }
+
     fn service(&self) {
-        println!("", )
+        
     }
 }

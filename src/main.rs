@@ -5,12 +5,14 @@ use syslog::Facility;
 use log::LevelFilter;
 
 use real_time::{Sequencer, RealTime};
-use std::sync::mpsc::{Sender, Receiver, channel};
+use std::sync::{Arc, Mutex};
 
 use std::time::Duration;
 
 use imaging::Camera;
 use rscam::Frame;
+
+use std::num::Wrapping;
 
 fn main() {
     
@@ -20,9 +22,9 @@ fn main() {
         Some("Sean's Code question_3")
     ).expect("Unable to connect to syslog");
 
-    // Initializing resources
-    let (to_file_differ, from_camera): (Sender<Frame>, Receiver<Frame>) = channel();
-    let camera: Box<RealTime + Send> = Box::new(Camera::new(to_file_differ));
+    // Initializing resource
+    let camera: Box<RealTime + Send> = Box::new(Camera::new());
+
     let services: Vec<Box<RealTime + Send>> = vec![camera];
     let sequencer = Sequencer::new();
 
