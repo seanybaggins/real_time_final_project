@@ -1,58 +1,37 @@
 use crate::real_time;
 use crate::real_time::RealTime;
 
-use rscam::{Config, Frame};
+use crate::ring_buffer::RingBuffer;
 
 use std::sync::{Arc, Mutex};
 
 use std::num::Wrapping;
 
-use std::{mem, ptr};
+use opencv::videoio;
+use opencv::videoio::{CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH};
 
 pub struct Camera {
-    hardware: rscam::Camera,
-    pub ring_buffer: Arc<[Mutex<Box<Frame>>; 10]>,
+    pub hardware: opencv::videoio::VideoCapture,
+    pub ring_buffer: Arc<RingBuffer>,
     pub ring_reader_writer_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>
 }
 
 impl Camera {
-    pub fn capture(&self) -> Frame {
-        self.hardware.capture().unwrap()
-    }
 
-    pub fn new () -> Self {
-        let mut hardware = rscam::Camera::new("/dev/video0").unwrap();
-        
-        hardware.start(
-            &Config {
-                interval: (1, 30),      // 30 fps.
-                resolution: (640, 480),
-                format: b"RGB3",
-                ..Default::default()
-            }
-        )
-        .expect("Could not configure camera");
+    pub fn new(ring_buffer: Arc<RingBuffer>, 
+    ring_reader_writer_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>) -> Self {
 
-        let mut fake: Vec<Box<_>> = Vec::new();
-        
-        let frame = hardware.capture().unwrap();
+        #[cfg(feature = "opencv-32")]
+        let mut hardware = videoio::VideoCapture::new(CAP_MODE_GRAY).unwrap();  // 0 is the default camera
+        #[cfg(not(feature = "opencv-32"))]
+        let mut hardware = videoio::VideoCapture::new_with_backend(0, videoio::CAP_ANY).unwrap();  // 0 is the default camera
+        let opened = videoio::VideoCapture::is_opened(&hardware).unwrap();
+        if !opened {
+            panic!("Unable to open default camera!");
+        }
 
-        fake.push(Box::new(frame));
-
-        let ring_buffer = unsafe {
-            let mut ring_buffer: [Mutex<Box<Frame>>; 10] = mem::uninitialized();
-            for element in ring_buffer.iter_mut() {
-                let frame = Mutex::new(Box::new(hardware.capture().unwrap()));
-                ptr::write(element, frame);
-            }
-            ring_buffer
-        };
-
-        
-        let ring_buffer = Arc::new(ring_buffer);
-        let ring_reader_writer_count = Arc::new(Mutex::new(
-            (Wrapping(1), Wrapping(0))
-        ));
+        hardware.set(CAP_PROP_FRAME_HEIGHT, 480.0).unwrap();
+        hardware.set(CAP_PROP_FRAME_WIDTH, 640.0).unwrap();
 
         Camera {
             hardware,
