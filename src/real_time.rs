@@ -133,6 +133,7 @@ impl Sequencer {
         for tx in tx_channels {
             tx.send(SequencerCommand::Exit).unwrap();
         }
+
     }
 
     pub fn new() -> Self {

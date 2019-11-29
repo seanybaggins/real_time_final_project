@@ -9,6 +9,7 @@ use std::num::Wrapping;
 use opencv::videoio;
 use opencv::videoio::{CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH};
 
+const WINDOW: &str = "video capture";
 
 pub struct Camera {
     pub hardware: opencv::videoio::VideoCapture,
@@ -53,9 +54,9 @@ impl RealTime for Camera {
     }
 
     fn service(&mut self) {
-        let window = "Debug in camera";
-        opencv::highgui::named_window(window, 1)
-            .expect("failed window init");
+        
+        //opencv::highgui::named_window(WINDOW, 1)
+        //    .expect("failed window init");
 
         // Determining what index to write to the ring buffer
         let mut ring_read_write_count = self.ring_read_write_count.lock().unwrap();
@@ -67,8 +68,12 @@ impl RealTime for Camera {
         self.hardware.read(&mut *frame)
             .expect("Error in writing frame");
 
-        opencv::highgui::imshow("Debug in camera", &mut *frame)
-            .expect("unable to show frame");
+        *writer_count += Wrapping(1);
+
+        //opencv::highgui::imshow(WINDOW, &mut *frame)
+        //    .expect("unable to show frame");
+
+        //opencv::highgui::wait_key(5).unwrap();
     }
 }
 
@@ -85,3 +90,20 @@ impl FileDiffer {
 
     
 }
+
+impl RealTime for FileDiffer {
+    fn priority(&self) -> i32 {
+        real_time::MAX_PRIORITY - 1
+    }
+
+    fn frequency(&self) -> u32 {
+        20
+    }
+
+    fn service(&mut self) {
+        
+    }
+}
+
+#[cfg(test)]
+mod tests;
