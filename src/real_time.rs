@@ -11,7 +11,7 @@ use log::{error, info};
 
 pub trait RealTime {
 
-    fn service(&self);
+    fn service(&mut self);
 
     fn priority(&self) -> i32;
 
@@ -56,7 +56,7 @@ impl RealTime for Sequencer {
         100
     }
 
-    fn service(&self) {
+    fn service(&mut self) {
         
     }
 }
@@ -73,7 +73,7 @@ impl Sequencer {
             })
             .collect();
         
-        for service in services {
+        for mut service in services {
             // Setting up communication channels
             let (tx, rx) = channel();
             tx_channels.push(tx);

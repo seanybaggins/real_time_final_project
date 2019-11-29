@@ -4,22 +4,22 @@ use crate::real_time::RealTime;
 use crate::ring_buffer::RingBuffer;
 
 use std::sync::{Arc, Mutex};
-
 use std::num::Wrapping;
 
 use opencv::videoio;
 use opencv::videoio::{CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH};
 
+
 pub struct Camera {
     pub hardware: opencv::videoio::VideoCapture,
-    pub ring_buffer: Arc<RingBuffer>,
-    pub ring_reader_writer_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>
+    ring_buffer: Arc<RingBuffer>,
+    ring_read_write_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>
 }
 
 impl Camera {
 
     pub fn new(ring_buffer: Arc<RingBuffer>, 
-    ring_reader_writer_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>) -> Self {
+    ring_read_write_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>) -> Self {
 
         #[cfg(feature = "opencv-32")]
         let mut hardware = videoio::VideoCapture::new(CAP_MODE_GRAY).unwrap();  // 0 is the default camera
@@ -36,7 +36,7 @@ impl Camera {
         Camera {
             hardware,
             ring_buffer,
-            ring_reader_writer_count
+            ring_read_write_count
         }
         
     }
@@ -52,17 +52,36 @@ impl RealTime for Camera {
         20
     }
 
-    fn service(&self) {
-        /*
-        let frame = self.capture();
+    fn service(&mut self) {
+        let window = "Debug in camera";
+        opencv::highgui::named_window(window, 1)
+            .expect("failed window init");
 
-        // Acquiring locks to ring buffer
-        let (reader_count, writer_count) = *self.ring_reader_writer_count
-            .lock().unwrap();
-        let mut buffer_resource = self.ring_buffer[writer_count.0]
-            .lock().unwrap();
-        
-        *buffer_resource = frame;
-        */
+        // Determining what index to write to the ring buffer
+        let mut ring_read_write_count = self.ring_read_write_count.lock().unwrap();
+        let writer_count = &mut (*ring_read_write_count).1;
+        let write_index = (*writer_count).0 % self.ring_buffer.buffer.len();
+
+        let mut frame = self.ring_buffer.buffer.get(write_index).unwrap().lock().unwrap();
+
+        self.hardware.read(&mut *frame)
+            .expect("Error in writing frame");
+
+        opencv::highgui::imshow("Debug in camera", &mut *frame)
+            .expect("unable to show frame");
     }
+}
+
+struct FileDiffer {
+    ring_buffer: Arc<Mutex<RingBuffer>>,
+}
+
+impl FileDiffer {
+    fn new(ring_buffer: Arc<Mutex<RingBuffer>>) -> Self {
+        FileDiffer {
+            ring_buffer
+        }
+    }
+
+    
 }
