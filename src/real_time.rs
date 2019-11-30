@@ -11,6 +11,8 @@ use log::{error, info};
 
 pub trait RealTime {
 
+    fn name(&self) -> &str;
+
     fn service(&mut self);
 
     fn priority(&self) -> i32;
@@ -42,11 +44,13 @@ pub trait RealTime {
     }
 }
 
-pub struct Sequencer {
-
-}
+pub struct Sequencer;
 
 impl RealTime for Sequencer {
+
+    fn name (&self) -> &str {
+        "sequencer"
+    }
 
     fn priority(&self) -> i32 {
         MAX_PRIORITY
@@ -94,7 +98,11 @@ impl Sequencer {
         
                     match sequencer_command {
                         SequencerCommand::ProvideService => {
-                            service.service();
+                            info!("{},T,{:?}, time_elapsed, {:?}", service.name(), 
+                                service.period(),    
+                                universal_clock.elapsed()
+                            );
+                                service.service();
                         }
                         SequencerCommand::Exit => break
                     }
@@ -109,7 +117,7 @@ impl Sequencer {
         while time_capturing.elapsed() < stop_time {
 
             for (service_number, service_frequency) in service_frequencies.iter().enumerate() {
-                if sequence_count % service_frequency == 0 {
+                if sequence_count % (self.frequency()/service_frequency) == 0 {
                     tx_channels[service_number].send(
                         SequencerCommand::ProvideService
                     )
@@ -117,8 +125,8 @@ impl Sequencer {
                 }
             }
 
-            info!("Sequencer,time_elapsed,{:?}", 
-                universal_clock.elapsed());
+            info!("{},time_elapsed,{:?}", 
+                self.name(),universal_clock.elapsed());
 
             let time_error = start_time + time_capturing.elapsed() - 
                 self.period() * sequence_count;

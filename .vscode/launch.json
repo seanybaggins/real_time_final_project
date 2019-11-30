@@ -40,6 +40,44 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug convert to grayscale",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=final_project",
+                    "--package=final_project"
+                ],
+                "filter": {
+                    "name": "final_project",
+                    "kind": "bin"
+                }
+            },
+            "args": ["frame_convert_gray_scale"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug diff_of_frames",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=final_project",
+                    "--package=final_project"
+                ],
+                "filter": {
+                    "name": "final_project",
+                    "kind": "bin"
+                }
+            },
+            "args": ["diff_of_frames"],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
