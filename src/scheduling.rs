@@ -67,9 +67,8 @@ impl RealTime for Sequencer {
 
 impl Sequencer {
 
-    pub fn sequence(&self, services: Vec<Box<RealTime + Send>>, stop_time: Duration) {
+    pub fn sequence(&self, services: Vec<Box<RealTime + Send>>, stop_time: Duration, universal_clock: Arc<Instant>) {
         let mut tx_channels = Vec::with_capacity(services.len());
-        let universal_clock = Arc::new(Instant::now());
 
         let service_frequencies: Vec<u32> = services.iter()
             .map(|real_time_object| {
@@ -109,6 +108,9 @@ impl Sequencer {
                 }
             });
         }
+
+        // Wait for other threads to finish startup
+        thread::sleep(Duration::from_millis(100));
 
         let time_capturing = Instant::now();
         let mut sequence_count = 0;
@@ -156,4 +158,15 @@ impl Sequencer {
 pub enum SequencerCommand {
     ProvideService,
     Exit
+}
+
+pub mod best_effort {
+    use crate::scheduling::MAX_PRIORITY;
+    use scheduler::Policy;
+
+    pub fn set_cpu_affinity() {
+        let core_ids = core_affinity::get_core_ids().expect("Failed to get available cores");
+        core_affinity::set_for_current(core_ids[1]);
+    }
+
 }

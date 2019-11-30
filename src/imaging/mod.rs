@@ -1,11 +1,12 @@
-use crate::real_time;
-use crate::real_time::RealTime;
+use crate::scheduling;
+use crate::scheduling::RealTime;
 
 use crate::ring_buffer::RingBuffer;
 
 use std::sync::{Arc, Mutex};
-use std::num::Wrapping;
+use std::sync::mpsc::Sender;
 
+use std::num::Wrapping;
 use std::f64;
 
 use opencv::videoio;
@@ -63,7 +64,7 @@ impl RealTime for Camera {
     }
 
     fn priority(&self) -> i32 {
-        real_time::MAX_PRIORITY - 1
+        scheduling::MAX_PRIORITY - 1
     }
 
     fn frequency(&self) -> u32 {
@@ -110,14 +111,14 @@ pub fn convert_to_grayscale(frame: &Mat) -> Mat {
 pub struct FrameDiffer {
     ring_buffer: Arc<RingBuffer>,
     ring_read_write_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>,
-    best_frame: Arc<Mutex<opencv::prelude::Mat>>,
+    best_frame: Arc<Mutex<Option<opencv::prelude::Mat>>>,
     min_frame_diff: f64
 }
 
 impl FrameDiffer {
     pub fn new(ring_buffer: Arc<RingBuffer>, 
     ring_read_write_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>,
-    best_frame: Arc<Mutex<core::Mat>>) -> Self {
+    best_frame: Arc<Mutex<Option<core::Mat>>>) -> Self {
         FrameDiffer {
             ring_buffer,
             ring_read_write_count,
@@ -126,7 +127,7 @@ impl FrameDiffer {
         }
     }
 
-    fn diff_of_frames(frame0: &Mat, frame1: &Mat) {
+    fn diff_of_frames(frame0: &Mat, frame1: &Mat) -> f64 {
         
         let mut diff_frame = Mat::default().unwrap();
         opencv::core::absdiff(frame0, frame1, &mut diff_frame).unwrap();
@@ -137,7 +138,7 @@ impl FrameDiffer {
             sum += diff_rgb_data[i];
         }
 
-        println!("{}", sum);
+        sum
         
     }
 }
@@ -167,9 +168,18 @@ impl RealTime for FrameDiffer {
         let frame_n_1 = self.ring_buffer.buffer.get(reader_index_1).unwrap().lock().unwrap();
 
         // Check if we need to reset our reference for the min frame diff
+        let mut best_frame = self.best_frame.lock().unwrap();
+        if (*best_frame).is_none() {
+            self.min_frame_diff = f64::MAX;
+        }
+
         let frame_diff = FrameDiffer::diff_of_frames(&(*frame_n), &(*frame_n_1));
-        
-        
+
+        // Check and see if we have found a new best frame
+        if frame_diff < self.min_frame_diff {
+            self.min_frame_diff = frame_diff;
+            *best_frame = Some(Mat::clone(&*frame_n).unwrap());
+        }
         
     }
 
@@ -178,14 +188,54 @@ impl RealTime for FrameDiffer {
     }
 
     fn priority(&self) -> i32 {
-        real_time::MAX_PRIORITY - 2
+        scheduling::MAX_PRIORITY - 2
     }
 
     fn frequency(&self) -> u32 {
         5
     }
+}
 
-    
+pub struct FrameSelector {
+    to_file_write: Sender<opencv::core::Mat>,
+    best_frame: Arc<Mutex<Option<Mat>>>
+}
+
+impl FrameSelector {
+    pub fn new(to_file_write: Sender<Mat>, best_frame: Arc<Mutex<Option<Mat>>>) -> Self {
+        FrameSelector {
+            to_file_write,
+            best_frame
+        }
+
+    }
+}
+
+impl RealTime for FrameSelector {
+
+    fn name(&self) -> &str {
+        "FrameSelector"
+    }
+
+    fn priority(&self) -> i32 {
+        scheduling::MAX_PRIORITY - 3
+    }
+
+    fn frequency(&self) -> u32 {
+        1
+    }
+
+    fn service(&mut self) {
+        // Acquire best frame
+        let mut best_frame = self.best_frame.lock().unwrap();
+
+        if let Some(best_frame) = best_frame.as_ref() {
+            let best_frame = Mat::clone(best_frame).unwrap();
+            self.to_file_write.send(best_frame).unwrap();
+        }
+
+        *best_frame = None;
+    }
 }
 
 #[cfg(test)]
