@@ -148,10 +148,9 @@ impl RealTime for FrameDiffer {
         
         // Determining indexes in the ring buffer
         let mut ring_read_write_count = self.ring_read_write_count.lock().unwrap();
-        let reader_count = &mut (*ring_read_write_count).0;
-        let writer_count = &mut (*ring_read_write_count).1;
-
-        if *writer_count <= *reader_count {
+        let (ref mut reader_count, ref mut writer_count) = *ring_read_write_count;
+        
+        if writer_count <= reader_count {
             // Then the buffer has not been populated yet
             return;
         }
@@ -168,7 +167,6 @@ impl RealTime for FrameDiffer {
         let frame_n_1 = self.ring_buffer.buffer.get(reader_index_1).unwrap().lock().unwrap();
 
         // Check if we need to reset our reference for the min frame diff
-
         let frame_diff = FrameDiffer::diff_of_frames(&(*frame_n), &(*frame_n_1));
         
         
