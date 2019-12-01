@@ -69,6 +69,7 @@ impl Sequencer {
 
     pub fn sequence(&self, services: Vec<Box<RealTime + Send>>, stop_time: Duration, universal_clock: Arc<Instant>) {
         let mut tx_channels = Vec::with_capacity(services.len());
+        let sequencer_start_time = Instant::now();
 
         let service_frequencies: Vec<u32> = services.iter()
             .map(|real_time_object| {
@@ -114,7 +115,6 @@ impl Sequencer {
 
         let time_capturing = Instant::now();
         let mut sequence_count = 0;
-        let start_time = universal_clock.elapsed();
 
         while time_capturing.elapsed() < stop_time {
 
@@ -128,9 +128,9 @@ impl Sequencer {
             }
 
             info!("{},time_elapsed,{:?}", 
-                self.name(),universal_clock.elapsed());
+                self.name(), universal_clock.elapsed());
 
-            let time_error = start_time + time_capturing.elapsed() - 
+            let time_error = time_capturing.elapsed() - 
                 self.period() * sequence_count;
 
             thread::sleep(self.period() - time_error);

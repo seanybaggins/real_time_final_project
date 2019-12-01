@@ -1,7 +1,6 @@
 use opencv;
 use std::sync::Mutex;
-use std::ops::{Index, IndexMut};
-use std::num::Wrapping;
+
 
 pub struct RingBuffer {
     pub buffer: Vec<Mutex<opencv::prelude::Mat>>,
