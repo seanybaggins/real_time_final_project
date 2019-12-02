@@ -26,17 +26,7 @@ pub fn backround_write_files(from_frame_select: Receiver<Mat>, universal_clock: 
             match best_frame {
                 Ok(mut best_frame) => {
                     // write clock time on image
-                    opencv::imgproc::put_text(
-                        &mut best_frame,
-                        format!("frame{:04}, Time: {:?}", frame_count, universal_clock.elapsed()).as_str(),
-                        Point::new(100,100), // Starting location of string
-                        FONT_HERSHEY_PLAIN, // Font type
-                        1.0, // Font Scale
-                        Scalar::new(0.0,0.0,0.0,0.0),
-                        1, // Thickness
-                        LINE_8,
-                        false, // Bottom left origin
-                    ).unwrap();
+                    
 
                     imaging::show_frame(&mut best_frame);
 
@@ -55,4 +45,18 @@ pub fn backround_write_files(from_frame_select: Receiver<Mat>, universal_clock: 
 
         }
     });
+}
+
+fn write_image(frame: &mut Mat, frame_number: u32, universal_clock: Arc<Instant>) {
+    opencv::imgproc::put_text(
+        frame,
+        format!("frame{:04}\n Time: {:?}", frame_number, universal_clock.elapsed()).as_str(),
+        Point::new(100,100), // Starting location of string
+        FONT_HERSHEY_PLAIN, // Font type
+        1.0, // Font Scale
+        Scalar::new(0.0,0.0,0.0,0.0),
+        1, // Thickness
+        LINE_8,
+        false, // Bottom left origin
+    ).unwrap();
 }

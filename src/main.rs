@@ -37,15 +37,15 @@ fn main() {
     // Creating best effort task for file io
     fileio::backround_write_files(from_frame_selector, Arc::clone(&universal_clock));
 
-    let camera: Box<RealTime + Send> = Box::new(Camera::new(
-        ring_buffer.clone(),
-        ring_read_write_count.clone()
-    ));
-
     let frame_differ: Box<RealTime + Send> = Box::new(FrameDiffer::new(
         ring_buffer.clone(),
         ring_read_write_count.clone(),
         best_frame.clone()
+    ));
+
+    let camera: Box<RealTime + Send> = Box::new(Camera::new(
+        ring_buffer.clone(),
+        ring_read_write_count.clone()
     ));
 
     let frame_selector: Box<RealTime + Send> = Box::new(FrameSelector::new(
