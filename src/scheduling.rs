@@ -69,7 +69,6 @@ impl Sequencer {
 
     pub fn sequence(&self, services: Vec<Box<RealTime + Send>>, stop_time: Duration, universal_clock: Arc<Instant>) {
         let mut tx_channels = Vec::with_capacity(services.len());
-        let sequencer_start_time = Instant::now();
 
         let service_frequencies: Vec<u32> = services.iter()
             .map(|real_time_object| {
@@ -98,11 +97,15 @@ impl Sequencer {
         
                     match sequencer_command {
                         SequencerCommand::ProvideService => {
-                            info!("{},T,{:?}, time_elapsed, {:?}", service.name(), 
+                            info!("Start {},T,{:?}, time_elapsed, {:?}", service.name(), 
                                 service.period(),    
                                 universal_clock.elapsed()
                             );
-                                service.service();
+
+                            service.service();
+
+                            info!("Done {}, time_elapsed, {:?}", service.name(), universal_clock.elapsed());
+
                         }
                         SequencerCommand::Exit => break
                     }

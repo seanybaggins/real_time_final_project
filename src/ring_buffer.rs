@@ -21,19 +21,3 @@ impl RingBuffer {
         }
     }
 }
-/*
-impl Index<usize> for RingBuffer {
-    type Output = opencv::prelude::Mat;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.buffer[index]
-    }
-}
-
-impl IndexMut<usize> for RingBuffer {
-
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.buffer[index]
-    }
-}
-*/

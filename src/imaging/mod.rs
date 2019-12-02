@@ -103,7 +103,7 @@ pub fn show_frame(frame: &mut Mat) {
 pub fn convert_to_grayscale(frame: &Mat) -> Mat {
     let mut gray_frame = Mat::default().unwrap();
     
-    opencv::imgproc::cvt_color(frame, &mut gray_frame, COLOR_RGB2GRAY,0).unwrap();
+    opencv::imgproc::cvt_color(frame, &mut gray_frame, COLOR_RGB2GRAY, 0).unwrap();
     
     gray_frame
 }
@@ -128,9 +128,12 @@ impl FrameDiffer {
     }
 
     fn diff_of_frames(frame0: &Mat, frame1: &Mat) -> f64 {
+
+        let mut gray0 = convert_to_grayscale(frame0);
+        let mut gray1 = convert_to_grayscale(frame1);
         
         let mut diff_frame = Mat::default().unwrap();
-        opencv::core::absdiff(frame0, frame1, &mut diff_frame).unwrap();
+        opencv::core::absdiff(&mut gray0, &mut gray1, &mut diff_frame).unwrap();
         let diff_rgb_data = opencv::core::sum(&diff_frame).unwrap();
 
         let mut sum = 0.0;
@@ -151,13 +154,17 @@ impl RealTime for FrameDiffer {
         let mut ring_read_write_count = self.ring_read_write_count.lock().unwrap();
         let (ref mut reader_count, ref mut writer_count) = *ring_read_write_count;
         
-        if writer_count <= reader_count {
+        if writer_count.0 == 1 {
+            // Then the first two frames have not been populated
+            return;
+        }
+        else if writer_count < reader_count {
             // Then the buffer has not been populated yet
             return;
         }
 
         let reader_index = (*reader_count).0 % self.ring_buffer.buffer.len();
-        let reader_index_1 = ((*reader_count).0 - 1) % self.ring_buffer.buffer.len();
+        let reader_index_1 = ((*reader_count) - Wrapping(1)).0 % self.ring_buffer.buffer.len();
         *reader_count += Wrapping(1);
 
         // dropping the counts after the indexes have been determined
@@ -214,7 +221,7 @@ impl FrameSelector {
 impl RealTime for FrameSelector {
 
     fn name(&self) -> &str {
-        "FrameSelector"
+        "Frame Selector"
     }
 
     fn priority(&self) -> i32 {

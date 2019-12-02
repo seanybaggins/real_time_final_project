@@ -53,9 +53,9 @@ fn main() {
         best_frame.clone()
     ));
 
-    let services: Vec<Box<RealTime + Send>> = vec![camera, frame_differ];
+    let services: Vec<Box<RealTime + Send>> = vec![frame_selector, frame_differ, camera];
     let sequencer = Sequencer::new();
     
-    let stop_time = Duration::from_secs(1);
+    let stop_time = Duration::from_secs(15);
     sequencer.sequence(services, stop_time, Arc::clone(&universal_clock));
 }

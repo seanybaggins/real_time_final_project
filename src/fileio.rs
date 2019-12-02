@@ -29,9 +29,9 @@ pub fn backround_write_files(from_frame_select: Receiver<Mat>, universal_clock: 
                     opencv::imgproc::put_text(
                         &mut best_frame,
                         format!("frame{:04}, Time: {:?}", frame_count, universal_clock.elapsed()).as_str(),
-                        Point::new(15,15), // Starting location of string
+                        Point::new(100,100), // Starting location of string
                         FONT_HERSHEY_PLAIN, // Font type
-                        12.0, // Font Scale
+                        1.0, // Font Scale
                         Scalar::new(0.0,0.0,0.0,0.0),
                         1, // Thickness
                         LINE_8,
@@ -39,9 +39,9 @@ pub fn backround_write_files(from_frame_select: Receiver<Mat>, universal_clock: 
                     ).unwrap();
 
                     imaging::show_frame(&mut best_frame);
-                    
+
                     opencv::imgcodecs::imwrite(
-                        format!("frame{:04}", frame_count).as_str(),
+                        format!("frame{:04}.ppm", frame_count).as_str(),
                         &mut best_frame,
                         &VectorOfint::from_iter(vec!(IMWRITE_PXM_BINARY, 1))
                     ).unwrap();
