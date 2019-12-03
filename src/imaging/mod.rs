@@ -30,6 +30,7 @@ impl Camera {
     pub fn new(ring_buffer: Arc<RingBuffer>, 
     ring_read_write_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>) -> Self {
 
+        
         let mut hardware = init_camera_hardware();
 
         // warm up the camera and take some frames frames
@@ -37,7 +38,7 @@ impl Camera {
         
         for _ in 0..100 {
             hardware.read(&mut frame)
-            .expect("failed taking frames in initialization");
+                .expect("failed taking frames in initialization");
         }
 
         Camera {
@@ -97,6 +98,7 @@ impl RealTime for Camera {
 
 #[allow(dead_code)]
 pub fn show_frame(frame: &mut Mat) {
+
     opencv::highgui::named_window(WINDOW, 1)
         .expect("failed window init");
 
@@ -190,7 +192,7 @@ impl FrameDiffer {
         
         let mut diff_frame = Mat::default().unwrap();
         opencv::core::absdiff(&mut gray0, &mut gray1, &mut diff_frame).unwrap();
-        show_frame(&mut diff_frame);
+        //show_frame(&mut diff_frame);
         let diff_rgb_data = opencv::core::sum(&diff_frame).unwrap();
 
         let mut sum = 0.0;
@@ -226,7 +228,7 @@ impl RealTime for FrameDiffer {
         // Get the frames in the ring buffer
         let frame_n = self.ring_buffer.buffer.get(reader_index).unwrap().lock().unwrap();
         let frame_n_1 = self.ring_buffer.buffer.get(reader_index_1).unwrap().lock().unwrap();
-       
+        
         let frame_diff = FrameDiffer::diff_of_frames(&(*frame_n), &(*frame_n_1));
 
         let image_did_blur = self.image_did_blur(frame_diff);
