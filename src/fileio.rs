@@ -25,8 +25,9 @@ pub fn backround_write_files(from_frame_select: Receiver<Mat>, universal_clock: 
             
             match best_frame {
                 Ok(mut best_frame) => {
-                    // write clock time on image
-                    
+
+                    write_text_on_image(&mut best_frame, 
+                            frame_count, Arc::clone(&universal_clock));
 
                     imaging::show_frame(&mut best_frame);
 
@@ -35,7 +36,7 @@ pub fn backround_write_files(from_frame_select: Receiver<Mat>, universal_clock: 
                         &mut best_frame,
                         &VectorOfint::from_iter(vec!(IMWRITE_PXM_BINARY, 1))
                     ).unwrap();
-                    
+
                     frame_count += 1;
                 }
                 Err(_) => {
@@ -47,10 +48,10 @@ pub fn backround_write_files(from_frame_select: Receiver<Mat>, universal_clock: 
     });
 }
 
-fn write_image(frame: &mut Mat, frame_number: u32, universal_clock: Arc<Instant>) {
+fn write_text_on_image(frame: &mut Mat, frame_number: u32, universal_clock: Arc<Instant>) {
     opencv::imgproc::put_text(
         frame,
-        format!("frame{:04}\n Time: {:?}", frame_number, universal_clock.elapsed()).as_str(),
+        format!("frame{:04} Time: {:?}", frame_number, universal_clock.elapsed()).as_str(),
         Point::new(100,100), // Starting location of string
         FONT_HERSHEY_PLAIN, // Font type
         1.0, // Font Scale

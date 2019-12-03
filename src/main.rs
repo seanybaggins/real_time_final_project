@@ -2,7 +2,7 @@ mod scheduling;
 use scheduling::{Sequencer, RealTime};
 
 mod imaging;
-use imaging::{Camera, FrameDiffer, FrameSelector};
+use imaging::{Camera, FrameDiffer};
 use opencv::core;
 use opencv::core::Mat;
 
@@ -31,7 +31,6 @@ fn main() {
     let universal_clock = Arc::new(Instant::now());
     let ring_buffer = Arc::new(RingBuffer::with_capacity(10));
     let ring_read_write_count = Arc::new(Mutex::new((Wrapping(1), Wrapping(0))));
-    let best_frame = Arc::new(Mutex::new(None));
     let (to_file_write, from_frame_selector) = channel::<Mat>();
 
     // Creating best effort task for file io
@@ -40,7 +39,7 @@ fn main() {
     let frame_differ: Box<RealTime + Send> = Box::new(FrameDiffer::new(
         ring_buffer.clone(),
         ring_read_write_count.clone(),
-        best_frame.clone()
+        to_file_write
     ));
 
     let camera: Box<RealTime + Send> = Box::new(Camera::new(
@@ -48,14 +47,9 @@ fn main() {
         ring_read_write_count.clone()
     ));
 
-    let frame_selector: Box<RealTime + Send> = Box::new(FrameSelector::new(
-        to_file_write,
-        best_frame.clone()
-    ));
-
-    let services: Vec<Box<RealTime + Send>> = vec![frame_selector, frame_differ, camera];
+    let services: Vec<Box<RealTime + Send>> = vec![frame_differ, camera];
     let sequencer = Sequencer::new();
     
-    let stop_time = Duration::from_secs(15);
+    let stop_time = Duration::from_secs(3);
     sequencer.sequence(services, stop_time, Arc::clone(&universal_clock));
 }

@@ -72,7 +72,7 @@ impl RealTime for Camera {
     }
 
     fn priority(&self) -> i32 {
-        scheduling::MAX_PRIORITY - 1
+        scheduling::MAX_PRIORITY - 2
     }
 
     fn frequency(&self) -> u32 {
@@ -119,7 +119,7 @@ pub fn convert_to_grayscale(frame: &Mat) -> Mat {
 pub struct FrameDiffer {
     ring_buffer: Arc<RingBuffer>,
     ring_read_write_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>,
-    best_frame: Arc<Mutex<Option<opencv::prelude::Mat>>>,
+    to_file_write: Sender<Mat>,
     still_frame_threshold: f64,
     blurred_frame_threshold: f64,
     new_best_frame_needed: bool,
@@ -128,7 +128,7 @@ pub struct FrameDiffer {
 impl FrameDiffer {
     pub fn new(ring_buffer: Arc<RingBuffer>, 
     ring_read_write_count: Arc<Mutex<(Wrapping<usize>, Wrapping<usize>)>>,
-    best_frame: Arc<Mutex<Option<core::Mat>>>) -> Self {
+    to_file_write: Sender<Mat>) -> Self {
 
         let (still_frame_threshold, blurred_frame_threshold) 
             = Self::still_and_blurred_frame_threshold();
@@ -136,7 +136,7 @@ impl FrameDiffer {
         FrameDiffer {
             ring_buffer,
             ring_read_write_count,
-            best_frame,
+            to_file_write,
             still_frame_threshold,
             blurred_frame_threshold,
             new_best_frame_needed: true
@@ -190,6 +190,7 @@ impl FrameDiffer {
         
         let mut diff_frame = Mat::default().unwrap();
         opencv::core::absdiff(&mut gray0, &mut gray1, &mut diff_frame).unwrap();
+        show_frame(&mut diff_frame);
         let diff_rgb_data = opencv::core::sum(&diff_frame).unwrap();
 
         let mut sum = 0.0;
@@ -205,16 +206,12 @@ impl FrameDiffer {
 impl RealTime for FrameDiffer {
 
     fn service(&mut self) {
-        
+
         // Determining indexes in the ring buffer
         let mut ring_read_write_count = self.ring_read_write_count.lock().unwrap();
         let (ref mut reader_count, ref mut writer_count) = *ring_read_write_count;
         
-        if writer_count.0 == 1 {
-            // Then the first two frames have not been populated
-            return;
-        }
-        else if writer_count < reader_count {
+        if writer_count <= reader_count {
             // Then the buffer has not been populated yet
             return;
         }
@@ -226,20 +223,23 @@ impl RealTime for FrameDiffer {
         // dropping the counts after the indexes have been determined
         drop(ring_read_write_count);
 
-        // Get the frames in the ring buffer and best frame mutex
+        // Get the frames in the ring buffer
         let frame_n = self.ring_buffer.buffer.get(reader_index).unwrap().lock().unwrap();
         let frame_n_1 = self.ring_buffer.buffer.get(reader_index_1).unwrap().lock().unwrap();
-        let mut best_frame = self.best_frame.lock().unwrap();
-        
+       
         let frame_diff = FrameDiffer::diff_of_frames(&(*frame_n), &(*frame_n_1));
 
-        // Check if the camera moved/blurred
-        if self.image_did_blur(frame_diff) {
+        let image_did_blur = self.image_did_blur(frame_diff);
+        if image_did_blur {
             self.new_best_frame_needed = true;
         }
-        else if self.new_best_frame_needed == true && !self.image_did_blur(frame_diff) {
-            *best_frame = Some(Mat::clone(&*frame_n).unwrap());
+        else if self.new_best_frame_needed && !image_did_blur {
+
             self.new_best_frame_needed = false;
+
+            self.to_file_write.send(
+                Mat::clone(&*frame_n).unwrap()
+            ).unwrap();
         }
     }
 
@@ -248,53 +248,11 @@ impl RealTime for FrameDiffer {
     }
 
     fn priority(&self) -> i32 {
-        scheduling::MAX_PRIORITY - 2
+        scheduling::MAX_PRIORITY - 1
     }
 
     fn frequency(&self) -> u32 {
-        5
-    }
-}
-
-pub struct FrameSelector {
-    to_file_write: Sender<opencv::core::Mat>,
-    best_frame: Arc<Mutex<Option<Mat>>>
-}
-
-impl FrameSelector {
-    pub fn new(to_file_write: Sender<Mat>, best_frame: Arc<Mutex<Option<Mat>>>) -> Self {
-        FrameSelector {
-            to_file_write,
-            best_frame
-        }
-
-    }
-}
-
-impl RealTime for FrameSelector {
-
-    fn name(&self) -> &str {
-        "Frame Selector"
-    }
-
-    fn priority(&self) -> i32 {
-        scheduling::MAX_PRIORITY - 3
-    }
-
-    fn frequency(&self) -> u32 {
-        1
-    }
-
-    fn service(&mut self) {
-        // Acquire best frame
-        let mut best_frame = self.best_frame.lock().unwrap();
-
-        if let Some(best_frame) = best_frame.as_ref() {
-            let best_frame = Mat::clone(best_frame).unwrap();
-            self.to_file_write.send(best_frame).unwrap();
-        }
-
-        *best_frame = None;
+        20
     }
 }
 
