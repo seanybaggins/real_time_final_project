@@ -73,7 +73,7 @@ impl RealTime for Camera {
     }
 
     fn priority(&self) -> i32 {
-        scheduling::MAX_PRIORITY - 2
+        scheduling::MAX_PRIORITY - 1
     }
 
     fn frequency(&self) -> u32 {
@@ -250,11 +250,11 @@ impl RealTime for FrameDiffer {
     }
 
     fn priority(&self) -> i32 {
-        scheduling::MAX_PRIORITY - 1
+        scheduling::MAX_PRIORITY - 2
     }
 
     fn frequency(&self) -> u32 {
-        20
+        5
     }
 }
 

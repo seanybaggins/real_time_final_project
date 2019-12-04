@@ -50,6 +50,6 @@ fn main() {
     let services: Vec<Box<RealTime + Send>> = vec![frame_differ, camera];
     let sequencer = Sequencer::new();
     
-    let stop_time = Duration::from_secs(18);
+    let stop_time = Duration::from_secs(1802);
     sequencer.sequence(services, stop_time, Arc::clone(&universal_clock));
 }
