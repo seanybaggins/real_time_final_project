@@ -15,7 +15,8 @@ use crate::scheduling::best_effort;
 
 
 
-pub fn backround_write_files(from_frame_select: Receiver<Mat>, universal_clock: Arc<Instant>) {
+pub fn backround_write_files(from_frame_select: Receiver<Mat>, 
+universal_clock: Arc<Instant>) -> thread::JoinHandle<()> {
     thread::spawn(move || {
         best_effort::set_cpu_affinity();
         let mut frame_count = 0;
@@ -45,7 +46,7 @@ pub fn backround_write_files(from_frame_select: Receiver<Mat>, universal_clock: 
             }
 
         }
-    });
+    })
 }
 
 fn write_text_on_image(frame: &mut Mat, frame_number: u32, universal_clock: Arc<Instant>) {

@@ -34,7 +34,7 @@ fn main() {
     let (to_file_write, from_frame_selector) = channel::<Mat>();
 
     // Creating best effort task for file io
-    fileio::backround_write_files(from_frame_selector, Arc::clone(&universal_clock));
+    let best_effort_thread = fileio::backround_write_files(from_frame_selector, Arc::clone(&universal_clock));
 
     let frame_differ: Box<dyn RealTime + Send> = Box::new(FrameDiffer::new(
         ring_buffer.clone(),
@@ -52,4 +52,7 @@ fn main() {
     
     let stop_time = Duration::from_secs(180);
     sequencer.sequence(services, stop_time, Arc::clone(&universal_clock));
+
+    // Allow the best effort thread to finish writing frames
+    best_effort_thread.join().expect("Failed to join best effort thread");
 }
