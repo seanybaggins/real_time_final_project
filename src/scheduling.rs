@@ -67,7 +67,7 @@ impl RealTime for Sequencer {
 
 impl Sequencer {
 
-    pub fn sequence(&self, services: Vec<Box<RealTime + Send>>, stop_time: Duration, universal_clock: Arc<Instant>) {
+    pub fn sequence(&self, services: Vec<Box<dyn RealTime + Send>>, stop_time: Duration, universal_clock: Arc<Instant>) {
         let mut tx_channels = Vec::with_capacity(services.len());
 
         let service_frequencies: Vec<u32> = services.iter()

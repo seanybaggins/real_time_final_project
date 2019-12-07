@@ -36,20 +36,20 @@ fn main() {
     // Creating best effort task for file io
     fileio::backround_write_files(from_frame_selector, Arc::clone(&universal_clock));
 
-    let frame_differ: Box<RealTime + Send> = Box::new(FrameDiffer::new(
+    let frame_differ: Box<dyn RealTime + Send> = Box::new(FrameDiffer::new(
         ring_buffer.clone(),
         ring_read_write_count.clone(),
         to_file_write
     ));
 
-    let camera: Box<RealTime + Send> = Box::new(Camera::new(
+    let camera: Box<dyn RealTime + Send> = Box::new(Camera::new(
         ring_buffer.clone(),
         ring_read_write_count.clone()
     ));
 
-    let services: Vec<Box<RealTime + Send>> = vec![frame_differ, camera];
+    let services: Vec<Box<dyn RealTime + Send>> = vec![frame_differ, camera];
     let sequencer = Sequencer::new();
     
-    let stop_time = Duration::from_secs(1820);
+    let stop_time = Duration::from_secs(180);
     sequencer.sequence(services, stop_time, Arc::clone(&universal_clock));
 }
