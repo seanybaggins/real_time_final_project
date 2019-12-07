@@ -3,7 +3,7 @@ use scheduling::{Sequencer, RealTime};
 
 mod imaging;
 use imaging::{Camera, FrameDiffer};
-use opencv::core;
+
 use opencv::core::Mat;
 
 mod ring_buffer;

@@ -61,7 +61,7 @@ fn frame_convert_gray_scale() {
 
     imaging::show_frame(&mut gray_frame);
 
-    print!("");
+    print!(""); //  For debug purposes only
 
 }
 
@@ -77,17 +77,3 @@ fn diff_of_frames() {
     
 }
 
-#[test]
-fn frame_diff_wcet() {
-    let (mut camera, mut frame_differ) = set_up();
-    // fill the buffer
-    for _ in 0..10 {
-        camera.service();
-    }
-
-    let mut wcet = Duration::new(0, 0);
-    for _ in 0..500 {
-        let start_instant = Instant::now();
-        frame_differ_
-    }
-}

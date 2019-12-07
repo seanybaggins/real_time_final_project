@@ -1,6 +1,6 @@
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use std::thread;
 
 use crate::imaging;

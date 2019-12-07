@@ -164,9 +164,7 @@ pub enum SequencerCommand {
 }
 
 pub mod best_effort {
-    use crate::scheduling::MAX_PRIORITY;
-    use scheduler::Policy;
-
+    
     pub fn set_cpu_affinity() {
         let core_ids = core_affinity::get_core_ids().expect("Failed to get available cores");
         core_affinity::set_for_current(core_ids[1]);
